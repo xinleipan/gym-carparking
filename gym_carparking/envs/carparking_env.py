@@ -9,7 +9,7 @@ from PIL import Image as Image
 import matplotlib.pyplot as plt
 from scipy import misc
 
-class CarparkEnv(gym.Env):
+class CarparkingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     num_env = 0
 
@@ -228,7 +228,6 @@ class CarparkEnv(gym.Env):
         self.observation, is_collision = self.update_observation(to_state)
         self._render()
         return self.observation 
-
 
 def img_reshape(img, target_shape):
     ''' Input: img: numpy array of size W*H*C,
