@@ -157,6 +157,8 @@ class CarparkEnv(gym.Env):
         diff = np.sum(np.abs(np.array(self.agent_state) - np.array(self.agent_target_state)))
         if diff <= 10:
             done = True
+            if self.restart_once_done:
+                self.observation = self._reset()
             reward = 1
         else:
             done = False
