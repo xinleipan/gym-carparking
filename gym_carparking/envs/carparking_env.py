@@ -47,8 +47,8 @@ class CarparkingEnv(gym.Env):
         self.verbose = False # to show the environment or not
 
         if self.verbose == True:
-            CarparkEnv.num_env += 1
-            self.fig = plt.figure(CarparkEnv.num_env)
+            CarparkingEnv.num_env += 1
+            self.fig = plt.figure(CarparkingEnv.num_env)
             plt.show(block=False)
             plt.axis('off')
             self._render() 
@@ -137,7 +137,7 @@ class CarparkingEnv(gym.Env):
                 success = True
                 new_vex = copy.deepcopy(new_carpos_vex)
         new_agent_state = [new_vex[0,0], new_vex[1,0], new_vex[2,0], new_vex[3,0],
-                        new_vex[0,1], new_vex[1,1], new_vex[3,1], new_vex[4,1], 0]
+                        new_vex[0,1], new_vex[1,1], new_vex[2,1], new_vex[3,1], 0]
         self.observation, is_collision = self.update_observation(new_agent_state)
         if is_collision:
             success = False
@@ -177,7 +177,7 @@ class CarparkingEnv(gym.Env):
             return
         else:
             img = self.observation
-        fig = plt.figure(CarparkEnv.num_env)
+        fig = plt.figure(CarparkingEnv.num_env)
         plt.clf()
         plt.imshow(img)
         fig.canvas.draw()
