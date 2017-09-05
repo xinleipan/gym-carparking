@@ -24,7 +24,7 @@ class CarparkingEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=255, shape=self.obs_shape)
          
         ''' initialize system state '''
-        this_file_path = os.path.dirname(os.path.realpath(__file))
+        this_file_path = os.path.dirname(os.path.realpath(__file__))
         self.bg_img_path = os.path.join(this_file_path, 'parking3.png')
         self.car_img_path = os.path.join(this_file_path, 'Car.jpg')
         self.bg_img = np.array(Image.open(self.bg_img_path))
