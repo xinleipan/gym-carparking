@@ -220,7 +220,7 @@ class CarparkingEnv(gym.Env):
     def get_target_state(self):
         return self.agent_target_state
 
-    def jump_to_state(self, to_state):
+    def _jump_to_state(self, to_state):
         ''' move agent to another state '''
         ''' to_state: a list of x1-x4, y1-y4, angle '''
         self.observation, is_collision = self.update_observation(to_state)
@@ -238,6 +238,9 @@ class CarparkingEnv(gym.Env):
                 return (self.observation, 1, True, True)
             else:
                 return (self.observation, 0, False, True)
+    def jump_to_state(self, to_state):
+        a, b, c, d = self._jump_to_state(to_state)
+        return (a, b, c, d)
 
 def img_reshape(img, target_shape):
     ''' Input: img: numpy array of size W*H*C,
