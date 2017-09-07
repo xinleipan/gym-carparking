@@ -9,6 +9,31 @@ from PIL import Image as Image
 import matplotlib.pyplot as plt
 from scipy import misc
 
+def round_up(a):
+    if type(a) is type(np.array([1])):
+        abs_a = np.abs(a)
+        abs_a_int = np.int64(abs_a)
+        diff = abs_a - abs_a_int
+        r = abs_a.copy()
+        r[diff >=0.5] = abs_a_int[diff>=0.5]+1
+        r[diff <0.5] = abs_a_int[diff<0.5]
+        r[a<0] = r[a<0]*(-1)
+        return np.int64(r)
+    else:
+        if a >= 0:
+            if a-int(a) >= 0.5:
+                r = int(int(a)+1)
+            else:
+                r = int(a)
+        else:
+            abs_a = np.abs(a)
+            if abs_a - int(abs_a) >= 0.5:
+                r = -1*int(int(abs_a)+1)
+            else:
+                r = -1*int(abs_a)
+        return int(r)
+         
+    
 class CarparkingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     num_env = 0
@@ -86,6 +111,7 @@ class CarparkingEnv(gym.Env):
             new_carpos_vex = self._agent_state_to_vex(self.agent_state)
             sign = True
             angle = self.agent_state[-1]
+            '''
             for j in range(new_carpos_vex.shape[0]):
                 new_carpos_vex[j][0] += np.round(2.0 * np.cos(angle))
                 new_carpos_vex[j][1] += np.round(2.0 * np.sin(angle))
@@ -93,6 +119,11 @@ class CarparkingEnv(gym.Env):
                     or new_carpos_vex[j][1] < 0 or new_carpos_vex[j][1] >= self.obs_shape[1]:
                     sign = False
                     break
+            '''
+            toadd = np.array([[np.round(2.0*np.cos(angle)),np.round(2.0*np.sin(angle))]]).astype(np.int32)
+            new_carpos_vex += toadd
+            if np.any(new_carpos_vex <0) or np.any(new_carpos_vex>=self.obs_shape[0]):
+                sign = False
             if sign == True:
                 success = True
                 new_vex = copy.deepcopy(new_carpos_vex)
@@ -100,6 +131,7 @@ class CarparkingEnv(gym.Env):
             new_carpos_vex = self._agent_state_to_vex(self.agent_state)
             sign = True
             angle = self.agent_state[-1]
+            '''
             for j in range(new_carpos_vex.shape[0]):
                 new_carpos_vex[j][0] -= np.round(2.0 * np.cos(angle))
                 new_carpos_vex[j][1] -= np.round(2.0 * np.sin(angle))
@@ -107,6 +139,11 @@ class CarparkingEnv(gym.Env):
                     or new_carpos_vex[j][1] < 0 or new_carpos_vex[j][1] >= self.obs_shape[1]:
                     sign = False
                     break
+            '''
+            todel = np.array([[np.round(2.0*np.cos(angle)),np.round(2.0*np.sin(angle))]]).astype(np.int32)
+            new_carpos_vex -= todel
+            if np.any(new_carpos_vex <0) or np.any(new_carpos_vex>=self.obs_shape[0]):
+                sign = False
             if sign == True:
                 success = True
                 new_vex = copy.deepcopy(new_carpos_vex)
@@ -124,6 +161,7 @@ class CarparkingEnv(gym.Env):
             x_avg, y_avg = int(np.round(coord_avg[0])), int(np.round(coord_avg[1]))
             avg_coord = np.array([x_avg, y_avg])
             sign = True
+            '''
             for j in range(new_carpos_vex.shape[0]):
                 this_coord = new_carpos_vex[j]
                 new_coord = rot_mat.dot(this_coord)+(identity_mat-rot_mat).dot(avg_coord)
@@ -133,9 +171,17 @@ class CarparkingEnv(gym.Env):
                     or new_carpos_vex[j][1] < 0 or new_carpos_vex[j][1] >= self.obs_shape[1]:
                     sign = False
                     break
+            '''
+            new_coord = ((identity_mat-rot_mat).dot(avg_coord)).reshape((1,2))
+            new_carpos_vex = (rot_mat.dot(new_carpos_vex.T)).T + new_coord
+            new_carpos_vex = np.round(new_carpos_vex)
+            if np.any(new_carpos_vex<0) or np.any(new_carpos_vex>=self.obs_shape[0]):
+                sign = False
             if sign == True:
                 success = True
                 new_vex = copy.deepcopy(new_carpos_vex)
+        if success == False:
+            return (self.observation, -1, False, False)
         new_agent_state = [new_vex[0,0], new_vex[1,0], new_vex[2,0], new_vex[3,0],
                         new_vex[0,1], new_vex[1,1], new_vex[2,1], new_vex[3,1], 0]
         self.observation, is_collision = self.update_observation(new_agent_state)
@@ -154,17 +200,19 @@ class CarparkingEnv(gym.Env):
                 self.agent_state = new_agent_state[:-1] + [new_angle]
             else:
                 self.agent_state[:-1] = new_agent_state[:-1]    
-        diff = np.sum(np.abs(np.array(self.agent_state) - np.array(self.agent_target_state)))
-        if diff <= 10:
-            done = True
-            if self.restart_once_done:
-                self.observation = self._reset()
-            reward = 1
+            diff = np.sum(np.abs(np.array(self.agent_state) - np.array(self.agent_target_state)))
+            if diff <= 10:
+                done = True
+                if self.restart_once_done:
+                    self.observation = self._reset()
+                reward = 1
+            else:
+                done = False
+                reward = 0
+            self._render()
+            return (self.observation, reward, done, success)
         else:
-            done = False
-            reward = 0
-        self._render()
-        return (self.observation, reward, done, success)
+            return (self.observation, -1, False, False)
 
     def _reset(self):
         self.agent_state = copy.deepcopy(self.agent_start_state)
@@ -258,6 +306,7 @@ def homography_solve(u, v):
         Output: H matrix, 3*3
     '''
     A = np.zeros((8,8))
+    '''
     for i in range(8): # rows
         for j in range(8): # columns
             if i>=0 and i <=3 and j >=0 and j <=1:
@@ -278,6 +327,20 @@ def homography_solve(u, v):
             b[i] = v[0, i]
         else:
             b[i] = v[1, i-4]
+    '''
+    A[0:4,0:2] = u.T
+    A[4:,3:5] = u.T
+    A[0:4,2] = 1.0
+    A[4:,5] = 1.0
+    uT = u.T
+    vT = v.T
+    A[0:4,6] = -1.0*uT[:,0]*vT[:,0]
+    A[0:4,7] = -1.0*uT[:,1]*vT[:,0]
+    A[4:8,6] = -1.0*uT[:,0]*vT[:,1]
+    A[4:8,7] = -1.0*uT[:,1]*vT[:,1]
+    b = np.zeros((8,1))
+    b[:4] = v[0,:].reshape((4,1))
+    b[4:] = v[1,:].reshape((4,1))
     h = np.linalg.inv(A).dot(b)
     H = np.ones((9,1))
     H[0:8] = h
@@ -305,16 +368,31 @@ def premerge_img(img1, img2, Hmat):
     
     # map points in img 1 to img 2
     U = np.zeros((2, H*W))
+    '''
     for i in range(W):
         U[0, i*H : (i+1)*H] = i
         U[1, i*H : (i+1)*H] = np.arange(H)
+    '''
+    f1 = np.arange(W)
+    ff1 = np.repeat(f1, H)
+    f2 = np.arange(H)
+    ff2 = np.tile(f2, W)
+    U = np.stack((ff1, ff2))
+
     V = homography_transform(U, Hmat)
     V = np.around(V)
     V = V.astype(np.int32)
     U = U.astype(np.int32)
+    '''
     for i in range(U.shape[1]):
         if V[0,i] < W2 and V[0,i] >= 0 and V[1,i] < H2 and V[1,i] >= 0:
             img2[V[1,i], V[0,i], 0:3] = img1[U[1,i], U[0,i], 0:3]
+    '''
+    a,b = np.where(V[0,:]<W2), np.where(V[0,:]>=0)
+    c,d = np.where(V[1,:]<H2), np.where(V[1,:]>=0)
+    e = set(list(a[0])) & set(list(b[0])) & set(list(c[0])) & set(list(d[0]))
+    e = list(e)
+    img2[V[1,np.array(e)],V[0,np.array(e)],0:3] = img1[U[1,np.array(e)],U[0,np.array(e)],0:3]
     return img2, V
 
 def merge_img(img1, img2, v):
